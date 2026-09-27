@@ -49,6 +49,18 @@ Retrieval should combine semantic relevance with filters for scope, recency, and
 
 Compression can summarize old conversations or consolidate duplicate facts. Keep links to originals, mark the summary as derived, and revalidate important constraints before action.
 
+```mermaid
+flowchart LR
+    E[Candidate event or fact] --> V{Verified and useful later?}
+    V -- No --> D[Keep only in transient task state]
+    V -- Yes --> S[Store with owner, source, scope, and retention]
+    S --> R[Retrieve by relevance, authority, recency, and scope]
+    R --> C[Use visibly in constructed context]
+    C --> U{Correction, expiry, or deletion request?}
+    U -- No --> R
+    U -- Yes --> X[Correct, expire, or delete and audit]
+```
+
 ## Context construction
 
 Build context from ordered sections with explicit provenance: policy, task state, retrieved evidence, memory, tool definitions, and user input. Reserve budget for tool results and output. Remove stale or redundant messages instead of truncating blindly.
@@ -68,6 +80,24 @@ A protocol host coordinates the user experience and security policy. A client ma
 Local standard-input/output transport is simple and keeps a server under the host process boundary. Streamable HTTP supports remote operation and streaming responses. Remote servers need authenticated connections, origin validation, session handling, timeouts, and protection from cross-network request attacks.
 
 Resources expose addressable context such as documents or schema. Tools perform computation or actions. Prompts provide reusable interaction templates. Do not use a prompt when the requirement is a deterministic policy or executable operation.
+
+```mermaid
+flowchart LR
+    U[User] --> H[Protocol host]
+    H --> I[Identity, consent, and policy]
+    I --> C[Protocol client]
+    C -->|authenticated transport| S[Tool and resource server]
+    S --> A[Server-side authorization]
+    A --> R[Domain API or data]
+    A --> B[Sandboxed execution]
+    R --> O[Bounded result]
+    B --> O
+    O --> C
+    C --> H
+    H --> U
+    P[Audit, quotas, and revocation] -. governs .-> I
+    P -. governs .-> A
+```
 
 ## Authentication and authorization
 
