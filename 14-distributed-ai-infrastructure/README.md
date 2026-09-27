@@ -16,6 +16,18 @@ Record the complete compatibility matrix in the runtime image and node configura
 
 GPU memory holds weights, activations, temporary workspaces, and inference cache. Out-of-memory errors can arise from peak allocation or fragmentation. Measure real sequence distributions and leave operating headroom.
 
+```mermaid
+flowchart TB
+    A[AI service or training job] --> F[Framework and compiler]
+    F --> L[Optimized kernels and communication libraries]
+    L --> R[Compute runtime]
+    R --> D[Host driver]
+    D --> G[GPU or accelerator]
+    O[Operator and device plugin] -. configures and advertises .-> D
+    M[Metrics and profiles] -. observe .-> F
+    M -. observe .-> G
+```
+
 ## Workload economics
 
 Track useful tokens, examples, or completed tasks per accelerator hour. High utilization can still produce poor economics if requests queue too long or batches contain wasteful padding. Idle headroom may be necessary for latency objectives.
@@ -40,9 +52,37 @@ Quantization reduces weight memory and bandwidth. Evaluate task quality, support
 
 Time to first token and inter-token latency describe different user experiences. Report both with end-to-end request latency and queue time.
 
+```mermaid
+flowchart LR
+    Q[Request queue] --> A[Admission and quota]
+    A --> B[Continuous batch scheduler]
+    B --> K[Model workers and KV cache]
+    K --> S[Token stream]
+    S --> C[Client]
+    K --> M[GPU, cache, and token metrics]
+    Q --> M
+    M --> H[Autoscaling and load shedding]
+    H -. adjusts .-> A
+    H -. adjusts replicas .-> K
+```
+
 ## Distributed systems
 
 Training may parallelize data, model parameters, tensors, or pipeline stages. Communication overhead and checkpoint recovery determine whether more devices help. Inference may shard a model across devices or replicate it for throughput.
+
+```mermaid
+flowchart TB
+    W{What prevents one-device execution?}
+    W -->|Need more throughput| D[Data parallelism or replicated inference]
+    W -->|Operations do not fit| T[Tensor parallelism]
+    W -->|Layers do not fit| P[Pipeline parallelism]
+    W -->|Model and optimizer state do not fit| F[Fully sharded training]
+    D --> E[Measure scaling efficiency]
+    T --> E
+    P --> E
+    F --> E
+    E --> C[Topology-aware placement, checkpoint, and recovery test]
+```
 
 On Kubernetes, use accelerator-aware scheduling, node pools, taints, priorities, quotas, and topology constraints. Scale on queue depth or waiting time when CPU metrics do not represent demand. Account for model download and warm-up before marking a replica ready.
 
