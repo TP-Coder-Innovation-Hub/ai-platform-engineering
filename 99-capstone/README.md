@@ -1,6 +1,22 @@
 # Capstone: Production AI Platform
 
-Design a multi-tenant knowledge and operations assistant for an enterprise. The assistant answers from authorized internal sources, calls bounded business tools, and supports human approval for consequential actions.
+The primary capstone is a multi-tenant knowledge and operations assistant. Eight focused alternatives are available for learners who want to specialize.
+
+## Capstone portfolio
+
+| Project | Primary focus |
+|---|---|
+| [Production AI Platform](#scenario) | Complete multi-tenant knowledge and operations platform |
+| [Enterprise RAG Platform](01-enterprise-rag-platform.md) | Ingestion, retrieval, citations, and authorization |
+| [AI Incident Response Agent](02-ai-incident-response-agent.md) | Bounded agent execution and operational evidence |
+| [AI Observability Control Plane](03-ai-observability-control-plane.md) | Traces, quality, service objectives, and cost |
+| [AI Security Testing Platform](04-ai-security-testing-platform.md) | Repeatable red-team and release-gate automation |
+| [Multi-Agent Research System](05-multi-agent-research-system.md) | Evidence collection, verification, and orchestration |
+| [AI Code Review Platform](06-ai-code-review-platform.md) | Code context, analyzers, and high-precision findings |
+| [AI Customer Support Platform](07-customer-support-platform.md) | RAG, customer tools, approvals, and escalation |
+| [AI Workflow Automation Platform](08-ai-workflow-automation-platform.md) | Durable workflows with bounded model decisions |
+
+Every option uses the same standard: measurable evaluation, explicit security boundaries, observable failure handling, immutable releases, and operational ownership.
 
 ## Required capabilities
 
