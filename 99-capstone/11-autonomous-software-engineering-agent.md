@@ -11,6 +11,23 @@ Build an engineering agent that resolves one narrow class of repository issue in
 - diff review and human approval before publication; and
 - complete trajectory, artifact, and failure evidence.
 
+```mermaid
+flowchart LR
+    I[Scoped issue] --> G[Repository and scope gate]
+    G --> W[Isolated workspace]
+    W --> P[Bounded plan]
+    P --> L[Search, edit, test, and analysis loop]
+    L --> B{Budget and policy allow continuation?}
+    B -- Yes --> L
+    B -- No --> S[Stop with evidence]
+    L --> V[Diff, test, and scope validation]
+    V --> H{Human review}
+    H -- approved --> R[Publish pull request]
+    H -- changes requested --> W
+    N[Restricted network, credentials, and filesystem] -. constrains .-> W
+    A[Trajectory and artifact audit] -. records .-> L
+```
+
 ## Required evidence
 
 Evaluate against a fixed issue set. Measure task completion, test pass rate, regression rate, unnecessary edits, unsafe commands, review acceptance, time, and cost. Compare with a deterministic code-modification workflow for the same issue class.
