@@ -34,6 +34,16 @@ Each chapter should contain:
 5. a practical checkpoint; and
 6. clear completion criteria.
 
+## Commit discipline
+
+- Complete, validate, and commit one chapter before editing the next chapter.
+- A chapter commit may contain only that chapter's text files.
+- Do not bundle repository-level navigation or policy changes with a chapter.
+- Commit each image asset in its own commit. Do not bundle multiple image files together or include an image file in a chapter-text commit.
+- A later text commit may reference an image only after the image commit exists.
+- Mermaid diagrams are text inside the chapter and stay in the chapter commit.
+- Keep unfinished chapters untracked or unstaged. Never describe an outline or partial draft as complete.
+
 ## Technical stance
 
 - Build once and promote immutable artifacts.
@@ -43,4 +53,3 @@ Each chapter should contain:
 - Start with a workflow. Add agent autonomy only when runtime judgment is required.
 - Evaluate before deployment and observe after deployment.
 - Optimize cost per successful task, not cost per token in isolation.
-
