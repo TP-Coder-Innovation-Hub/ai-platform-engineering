@@ -19,6 +19,28 @@ The primary capstone is a multi-tenant knowledge and operations assistant. Eleve
 | [Documentation Intelligence Platform](10-documentation-intelligence-platform.md) | Staleness detection and reviewable documentation updates |
 | [Bounded Software Engineering Agent](11-autonomous-software-engineering-agent.md) | Isolated code changes, validation, and review |
 
+```mermaid
+flowchart TB
+    P[Production AI Platform portfolio]
+    P --> F[Full platform integration]
+    P --> K[Knowledge and customer systems]
+    P --> O[Operations and governance]
+    P --> A[Agent and workflow systems]
+    P --> E[Engineering systems]
+    F --> FP[Production AI Platform]
+    K --> RAG[Enterprise RAG]
+    K --> CS[Customer Support]
+    K --> DOC[Documentation Intelligence]
+    O --> OBS[Observability Control Plane]
+    O --> SEC[Security Testing]
+    O --> SRE[AI SRE Assistant]
+    A --> IR[Incident Response Agent]
+    A --> RES[Multi-Agent Research]
+    A --> WF[Workflow Automation]
+    E --> CR[AI Code Review]
+    E --> SWE[Bounded Engineering Agent]
+```
+
 Every option uses the same standard: measurable evaluation, explicit security boundaries, observable failure handling, immutable releases, and operational ownership.
 
 ## Required capabilities
