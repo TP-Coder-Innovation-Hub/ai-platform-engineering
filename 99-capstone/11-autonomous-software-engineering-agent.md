@@ -26,4 +26,3 @@ Evaluate against a fixed issue set. Measure task completion, test pass rate, reg
 ## Completion criteria
 
 The agent passes when work remains isolated, scope and budgets are enforced by the runtime, validation evidence accompanies the diff, and publication always requires review.
-
