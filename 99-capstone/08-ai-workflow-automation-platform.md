@@ -12,6 +12,22 @@ Build a platform that combines deterministic workflows with bounded model decisi
 - idempotent integrations with two enterprise systems; and
 - tenant quotas, audit, observability, and rollback.
 
+```mermaid
+flowchart LR
+    E[Document or business event] --> W[Durable workflow engine]
+    W --> X[Schema-constrained extraction]
+    X --> V[Deterministic validation]
+    V --> C[Bounded model classification]
+    C --> P[Policy and state transition rules]
+    P -->|clear and permitted| I[Idempotent integration]
+    P -->|ambiguous or high impact| H[Human review queue]
+    H --> P
+    I --> S[Recorded business state]
+    S --> W
+    A[Audit, quota, and telemetry] -. governs .-> W
+    A -. records .-> I
+```
+
 ## Required evidence
 
 Implement one process such as warranty claims, invoice exceptions, or access requests. Measure straight-through completion, correction, human review load, cycle time, error severity, and cost.
@@ -29,4 +45,3 @@ Compare a rules-only baseline, an unconstrained agent, and the hybrid design. St
 ## Completion criteria
 
 The platform passes when workflow state is recoverable, actions are idempotent, ambiguity reaches the right reviewer, and model output never controls authorization directly.
-
