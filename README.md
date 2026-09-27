@@ -4,6 +4,18 @@ A long-form learning path for engineers who build and operate the shared systems
 
 The path is organized by capability. It starts with reliable software delivery, moves through ML and AI platform design, and ends with production operations and customer integration. There are no calendar-based milestones. Move forward when you can explain the trade-offs and complete the chapter checkpoint.
 
+```mermaid
+flowchart LR
+    F["Foundations<br/>Chapters 00-03"] --> M["ML delivery and platforms<br/>Chapters 04-07"]
+    M --> A["Generative AI and agents<br/>Chapters 08-13"]
+    A --> S["Scale, customization, and product<br/>Chapters 14-18"]
+    S --> C["Production capstone portfolio<br/>Chapter 99"]
+    F -. delivery evidence .-> C
+    M -. reproducibility .-> C
+    A -. quality and safety .-> C
+    S -. operations and ownership .-> C
+```
+
 ## Learning outcomes
 
 By the end of this path, you will be able to:
@@ -49,4 +61,3 @@ The examples use Python, containers, Kubernetes, Terraform, and Git-based delive
 ## Core principle
 
 An AI platform is successful when product teams can ship useful AI changes safely without opening infrastructure tickets for routine work. Self-service without guardrails creates incidents. Guardrails without self-service create queues. Platform engineering balances both.
-
