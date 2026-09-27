@@ -11,6 +11,22 @@ Build a repeatable security evaluation platform for RAG and tool-using applicati
 - finding severity, evidence, ownership, and regression tracking; and
 - release gating for critical failures.
 
+```mermaid
+flowchart LR
+    S[Versioned attack suites] --> R[Isolated test runner]
+    I[Synthetic identities and data] --> R
+    R --> T[RAG or tool-using target]
+    T --> E[Responses, tool traces, and policy decisions]
+    E --> D[Deterministic assertions]
+    E --> J[Calibrated model-assisted grading]
+    D --> F[Evidence-backed findings]
+    J --> F
+    F --> G{Critical control failed?}
+    G -- Yes --> B[Block release]
+    G -- No --> P[Attach security evidence and promote]
+    F --> V[Owned regression suite]
+```
+
 ## Required evidence
 
 Threat-model one application and map every critical risk to a test and runtime control. Calibrate automated grading against human review. Report false positives and false negatives.
@@ -28,4 +44,3 @@ Demonstrate that a failed critical test blocks promotion and that a fixed findin
 ## Completion criteria
 
 The platform passes when tests are reproducible, isolated, tied to owned controls, and produce release evidence rather than an unstructured vulnerability report.
-
