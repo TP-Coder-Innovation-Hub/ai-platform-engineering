@@ -26,6 +26,21 @@ Prioritize authoritative instructions and relevant evidence. Remove duplicated h
 
 Long context does not remove retrieval design. More tokens increase latency and cost and can reduce attention to critical evidence. Measure quality across realistic context sizes.
 
+```mermaid
+flowchart TB
+    B[Finite context budget] --> P[Trusted policy and system instructions]
+    B --> E[Retrieved evidence with provenance]
+    B --> H[Relevant conversation and task state]
+    B --> T[Tool definitions and bounded results]
+    B --> U[Current user request]
+    P --> C[Ordered context package]
+    E --> C
+    H --> C
+    T --> C
+    U --> C
+    C --> R[Reserve space for generation]
+```
+
 ## Model access layer
 
 Put provider SDKs behind a typed gateway contract. Record model revision, parameters, token use, latency, request class, and policy result. Support timeouts, cancellation, rate limits, and streaming without exposing provider-specific objects to product code.
@@ -40,6 +55,30 @@ Route by task requirements:
 - cost ceiling.
 
 Evaluate routing on real tasks. A cheaper model that causes more retries or human corrections can cost more per successful outcome.
+
+```mermaid
+sequenceDiagram
+    participant U as User or application
+    participant G as Model gateway
+    participant P as Policy and router
+    participant M as Model runtime
+    participant T as Tool runtime
+    participant V as Validator
+    participant O as Trace and evaluation
+    U->>G: typed request and identity
+    G->>P: enforce policy, quota, and route
+    P->>M: versioned prompt and context
+    M-->>G: answer or tool proposal
+    opt Tool required
+        G->>T: validated, authorized call
+        T-->>G: bounded result
+        G->>M: continue with tool evidence
+        M-->>G: structured response
+    end
+    G->>V: schema and domain validation
+    V-->>U: accepted response or safe failure
+    G-->>O: versions, latency, tokens, and outcome
+```
 
 ## Managed and self-hosted models
 
