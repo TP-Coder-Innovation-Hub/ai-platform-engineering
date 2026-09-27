@@ -12,6 +12,22 @@ Build an observability layer that connects model, retrieval, tool, quality, late
 - alerting based on user impact and error-budget burn; and
 - failure-analysis workflow that creates regression cases.
 
+```mermaid
+flowchart LR
+    A[AI applications] --> C[Shared telemetry contract]
+    C --> T[Trace and metric pipeline]
+    T --> S[Privacy-safe telemetry store]
+    S --> Q[Quality evaluation]
+    S --> L[Latency and failure analysis]
+    S --> U[Usage and unit cost]
+    Q --> D[Unified operator view]
+    L --> D
+    U --> D
+    D --> B[User-impact and error-budget alerts]
+    D --> F[Failure analysis]
+    F --> R[Regression cases for release evaluation]
+```
+
 ## Required evidence
 
 Instrument a RAG request and a tool-using workflow end to end. Show queue, retrieval, model, validation, and tool spans. Demonstrate that a responder can distinguish model degradation from stale retrieval and tool failure.
@@ -29,4 +45,3 @@ Define retention and redaction rules. Prove that sensitive prompt content does n
 ## Completion criteria
 
 The control plane passes when operators can identify affected users, failing stage, exact release, cost impact, and next diagnostic action from one incident view.
-
