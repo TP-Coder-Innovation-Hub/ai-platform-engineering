@@ -26,4 +26,3 @@ Evaluate alert interpretation, calculation correctness, evidence coverage, unsup
 ## Completion criteria
 
 The assistant passes when every conclusion links to current operational evidence, deterministic calculations remain reproducible, and recommendations cannot bypass change control.
-
