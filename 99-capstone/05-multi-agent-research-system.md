@@ -12,6 +12,22 @@ Build a research workflow that gathers evidence, challenges claims, and produces
 - human review for unresolved conflicts; and
 - budgets for searches, documents, tokens, and elapsed time.
 
+```mermaid
+flowchart LR
+    Q[Research question] --> P[Bounded question plan]
+    P --> S[Source discovery workers]
+    S --> D[Document-reading workers]
+    D --> C[Durable claim and citation store]
+    C --> V[Claim verifier]
+    V -->|supported| R[Cited report]
+    V -->|contradicted| X[Visible conflict record]
+    V -->|insufficient evidence| H[Human review or abstention]
+    X --> H
+    B[Search, source, token, and time budgets] -. constrain .-> P
+    B -. constrain .-> S
+    B -. constrain .-> D
+```
+
 ## Required evidence
 
 Compare the multi-agent design with one structured research workflow. Measure source quality, citation support, claim coverage, contradiction handling, latency, and cost.
@@ -29,4 +45,3 @@ Document why each role needs separate context, permission, or scaling. Remove ro
 ## Completion criteria
 
 The system passes when every material claim links to supporting evidence, unresolved disagreement remains visible, and orchestration terminates predictably.
-
