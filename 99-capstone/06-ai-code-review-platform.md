@@ -12,6 +12,22 @@ Build a code-review service that identifies high-confidence correctness, securit
 - developer feedback and accepted-risk workflow; and
 - evaluation against labeled historical changes.
 
+```mermaid
+flowchart LR
+    P[Pull request] --> C[Authorized context builder]
+    C --> D[Diff, dependencies, and ownership]
+    D --> A[Static analysis and policy checks]
+    D --> M[Model review]
+    A --> N[Finding normalizer]
+    M --> N
+    N --> V[Line validation, deduplication, severity, and confidence]
+    V -->|high-confidence risk| R[Review finding]
+    V -->|known or accepted risk| S[Suppression workflow]
+    V -->|low confidence| L[Evaluation log only]
+    R --> F[Developer feedback and labeled evidence]
+    F --> E[Regression evaluation set]
+```
+
 ## Required evidence
 
 Measure precision by severity, recall on known defects, duplicate rate, developer dismissal, latency, and cost. Compare model-only review with a pipeline that uses deterministic analyzers before model reasoning.
@@ -29,4 +45,3 @@ Prevent repository instructions, comments, or test fixtures from changing review
 ## Completion criteria
 
 The platform passes when actionable precision meets the declared threshold, findings are traceable, and low-confidence output does not block delivery.
-
