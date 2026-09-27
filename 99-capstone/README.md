@@ -1,6 +1,6 @@
 # Capstone: Production AI Platform
 
-The primary capstone is a multi-tenant knowledge and operations assistant. Eight focused alternatives are available for learners who want to specialize.
+The primary capstone is a multi-tenant knowledge and operations assistant. Eleven focused alternatives are available for learners who want to specialize.
 
 ## Capstone portfolio
 
@@ -15,6 +15,9 @@ The primary capstone is a multi-tenant knowledge and operations assistant. Eight
 | [AI Code Review Platform](06-ai-code-review-platform.md) | Code context, analyzers, and high-precision findings |
 | [AI Customer Support Platform](07-customer-support-platform.md) | RAG, customer tools, approvals, and escalation |
 | [AI Workflow Automation Platform](08-ai-workflow-automation-platform.md) | Durable workflows with bounded model decisions |
+| [AI SRE Assistant](09-ai-sre-assistant.md) | Service objectives, capacity, and reliability evidence |
+| [Documentation Intelligence Platform](10-documentation-intelligence-platform.md) | Staleness detection and reviewable documentation updates |
+| [Bounded Software Engineering Agent](11-autonomous-software-engineering-agent.md) | Isolated code changes, validation, and review |
 
 Every option uses the same standard: measurable evaluation, explicit security boundaries, observable failure handling, immutable releases, and operational ownership.
 
