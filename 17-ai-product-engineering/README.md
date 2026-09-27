@@ -30,6 +30,24 @@ Separate session state, durable user memory, domain records, and telemetry. Auth
 
 Tenant-aware quotas should cover requests, tokens, tool calls, storage, and accelerator use. Attribute cost to product, tenant, feature, model, and outcome. Rate limits protect the system; budgets protect the business.
 
+```mermaid
+flowchart TB
+    U[User interface] --> E[Edge authentication and session API]
+    E --> P[Product orchestration service]
+    P --> J[Durable jobs and approval state]
+    P --> G[Model gateway]
+    P --> R[Tenant-scoped retrieval]
+    P --> T[Authorized domain tools]
+    G --> M[Managed or self-hosted models]
+    R --> D[Documents and indexes]
+    T --> S[Systems of record]
+    I[Identity, entitlement, and quota] -. governs .-> E
+    I -. governs .-> P
+    O[Telemetry, evaluation, and billing] -. observes .-> P
+    O -. observes .-> G
+    O -. observes .-> T
+```
+
 ## Identity, session, and memory
 
 Authentication establishes the user. Authorization is checked for each record and tool. Session state supports the current task. Durable memory is a separate opt-in capability with inspection, correction, export, and deletion.
@@ -63,6 +81,19 @@ Track task completion, correction, escalation, repeat use, latency, quality sign
 Define a metric tree from business outcome to user task, AI quality, and system health. Successful case resolution may depend on answer correctness, tool success, response time, and escalation quality.
 
 Run experiments with guardrail metrics for safety, support load, latency, and cost. Segment new and experienced users. Avoid optimizing engagement when the goal is task completion.
+
+```mermaid
+flowchart TB
+    B[Business outcome] --> U[Successful user task]
+    U --> Q[Answer or decision quality]
+    U --> A[Correct tool or workflow completion]
+    U --> R[Useful recovery or escalation]
+    Q --> G[Grounding, correctness, and safety]
+    A --> V[Authorization, validation, and idempotency]
+    R --> H[Handoff completeness and support resolution]
+    U --> L[Latency and availability]
+    U --> C[Cost per successful task]
+```
 
 ## Cost and capacity
 
