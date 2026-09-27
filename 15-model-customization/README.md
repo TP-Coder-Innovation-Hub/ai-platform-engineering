@@ -13,6 +13,24 @@ Customize a model only after simpler controls fail. Better instructions, retriev
 
 Fine-tuning is weak at storing facts that change frequently. It can improve consistent format, task behavior, terminology, and performance of a smaller model on a narrow distribution.
 
+```mermaid
+flowchart TD
+    B[Measured baseline gap] --> P{Can clearer instructions or examples close it?}
+    P -- Yes --> PR[Improve and evaluate prompt]
+    P -- No --> K{Is missing or changing knowledge the problem?}
+    K -- Yes --> R[Add evaluated retrieval]
+    K -- No --> T{Does the task need deterministic data or action?}
+    T -- Yes --> O[Add a bounded tool]
+    T -- No --> M{Does another base model meet the target?}
+    M -- Yes --> S[Switch model behind the gateway]
+    M -- No --> F[Justify customization with data rights and release gates]
+    PR --> E[Compare on the same evaluation set]
+    R --> E
+    O --> E
+    S --> E
+    F --> E
+```
+
 ## Transfer and instruction tuning
 
 Transfer learning starts from a pretrained model and adapts it to a target distribution. Full fine-tuning updates all model parameters and requires substantial memory and compute. Instruction tuning trains on input-response examples so the model follows a task pattern.
@@ -52,6 +70,20 @@ Low-bit weights reduce memory. Training-time and serving-time quantization are d
 Track base model revision, tokenizer, dataset, code, hyperparameters, seed, hardware, checkpoints, and metrics. Evaluate during training, but keep a held-out release set. Compare against the base model and the current production system, including safety and regressions outside the target task.
 
 Package adapters with explicit compatibility metadata. Merging adapters simplifies serving but creates a new artifact that needs full provenance and evaluation.
+
+```mermaid
+flowchart LR
+    D[Versioned, permitted dataset] --> T[Bounded training run]
+    B[Immutable base model and tokenizer] --> T
+    T --> A[Checkpoint or adapter artifact]
+    A --> E[Target, regression, safety, and memorization evaluation]
+    E --> G{Release gates pass?}
+    G -- No --> X[Reject and preserve evidence]
+    G -- Yes --> C[Canary deployment]
+    C --> M[Production monitoring]
+    M -->|healthy| P[Promote immutable release]
+    M -->|regression| R[Rollback to known-good release]
+```
 
 ## Training operations
 
