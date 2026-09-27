@@ -11,6 +11,21 @@ Build a reliability assistant that explains service health, evaluates error-budg
 - review workflow for recommendations; and
 - privacy-safe operational memory and audit.
 
+```mermaid
+flowchart LR
+    C[Service catalog, SLOs, and ownership] --> E[Evidence collector]
+    T[Metrics, logs, traces, incidents, and changes] --> E
+    E --> D[Deterministic burn-rate and capacity calculations]
+    E --> H[Evidence-linked hypotheses]
+    D --> A[Reliability assistant]
+    H --> A
+    A --> R[Prioritized recommendation with cost context]
+    R --> V[Operator review]
+    V -->|accepted| B[Owned backlog or change process]
+    V -->|rejected| F[Feedback and evaluation case]
+    B --> X[Existing production change control]
+```
+
 ## Required evidence
 
 Evaluate alert interpretation, calculation correctness, evidence coverage, unsupported conclusions, prioritization, latency, and operator acceptance. Compare the assistant with existing dashboards and runbooks.
