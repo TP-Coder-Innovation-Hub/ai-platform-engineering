@@ -26,4 +26,3 @@ Create a labeled set of current and stale documents. Measure detection precision
 ## Completion criteria
 
 The platform passes when it improves documentation through reviewable drafts, preserves ownership, and never publishes model output directly.
-
