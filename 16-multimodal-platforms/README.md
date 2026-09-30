@@ -31,6 +31,21 @@ OCR converts document pixels into text and layout. Vision encoders capture image
 
 Preserve timestamps, bounding boxes, page numbers, and confidence so downstream answers can point back to evidence. Multimodal retrieval may combine separate indexes or a shared embedding space. Test whether the representation supports the actual query types.
 
+```mermaid
+flowchart TB
+    I[Input media] --> T{Modality}
+    T --> D[Document or image]
+    T --> A[Audio]
+    T --> V[Video]
+    D --> O[OCR, layout, and vision]
+    A --> S[Speech, diarization, and timing]
+    V --> F[Frames, audio, and temporal events]
+    O --> E[Evidence with location]
+    S --> E
+    F --> E
+    E --> R[Retrieval, review, or action]
+```
+
 ### Vision and documents
 
 Image classification assigns labels to an image. Object detection locates instances. Segmentation assigns regions. Vision-language models connect visual and textual reasoning. OCR needs text recognition plus layout when reading forms, tables, or multi-column pages.
