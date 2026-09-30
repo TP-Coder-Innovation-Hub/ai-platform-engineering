@@ -14,21 +14,18 @@ Customize a model only after simpler controls fail. Better instructions, retriev
 Fine-tuning is weak at storing facts that change frequently. It can improve consistent format, task behavior, terminology, and performance of a smaller model on a narrow distribution.
 
 ```mermaid
-flowchart TD
-    B[Measured baseline gap] --> P{Can clearer instructions or examples close it?}
-    P -- Yes --> PR[Improve and evaluate prompt]
-    P -- No --> K{Is missing or changing knowledge the problem?}
-    K -- Yes --> R[Add evaluated retrieval]
-    K -- No --> T{Does the task need deterministic data or action?}
-    T -- Yes --> O[Add a bounded tool]
-    T -- No --> M{Does another base model meet the target?}
-    M -- Yes --> S[Switch model behind the gateway]
-    M -- No --> F[Justify customization with data rights and release gates]
-    PR --> E[Compare on the same evaluation set]
-    R --> E
-    O --> E
-    S --> E
-    F --> E
+flowchart LR
+    B[Measured gap] --> G{What kind of gap remains?}
+    G --> P[Prompt or example quality]
+    G --> K[Missing or changing knowledge]
+    G --> T[Deterministic data or action]
+    G --> M[Base-model capability]
+    G --> F[Behavior or domain pattern]
+    P --> PR[Improve the prompt]
+    K --> R[Add retrieval]
+    T --> O[Add a bounded tool]
+    M --> S[Switch the model]
+    F --> FT[Justify customization and release gates]
 ```
 
 ## Transfer and instruction tuning
