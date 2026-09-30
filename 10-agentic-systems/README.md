@@ -26,6 +26,15 @@ A deterministic workflow defines transitions in code. A model may classify or ge
 
 Start with a workflow when the process is known, regulated, or side-effect-heavy. Add agentic choice only where runtime ambiguity makes fixed branching impractical. Hybrid systems keep approvals and state transitions deterministic while allowing model choice inside bounded stages.
 
+```mermaid
+flowchart TB
+    T[Task] --> K{Are the steps known and stable?}
+    K -- Yes --> W[Workflow: coded transitions and bounded model steps]
+    K -- No --> A[Agent: adaptive next action with bounded tools and budgets]
+    W --> H[Hybrid: model choice only inside selected stages]
+    A --> H
+```
+
 An agent needs:
 
 - an objective and completion contract;
