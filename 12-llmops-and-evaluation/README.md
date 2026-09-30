@@ -14,6 +14,15 @@ Use several layers:
 
 Model judges are measurement tools, not ground truth. Calibrate them against human labels, randomize presentation order, track disagreement, and version the judge model and rubric.
 
+```mermaid
+flowchart TB
+    D[Deterministic checks] --> R[Reference-based metrics]
+    R --> J[Calibrated model judging]
+    J --> H[Expert review]
+    H --> O[Online outcomes and feedback]
+    O -. production failures .-> D
+```
+
 ## Evaluation dataset design
 
 Start with the product task and known failure costs. Include ordinary cases, boundary conditions, important user groups, multiple languages where supported, adversarial input, unanswerable questions, dependency failures, and policy-sensitive actions.
