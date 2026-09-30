@@ -34,6 +34,14 @@ The API server accepts desired state. Controllers reconcile resources toward tha
 
 This reconciliation model is central: controllers repeatedly compare desired and actual state. Operational tooling should declare intent and observe reconciliation instead of performing one-time remote commands.
 
+```mermaid
+flowchart TB
+    I[Desired state] --> C[Control plane: API, state, controllers, and scheduler]
+    C --> N[Selected node: agent and container runtime]
+    N --> P[Running pod]
+    P -. observed state .-> C
+```
+
 ### Workload controllers
 
 - A Deployment manages interchangeable replicas and rolling updates.
