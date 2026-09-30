@@ -15,6 +15,19 @@ Map assets, actors, trust boundaries, entry points, and consequences. Include:
 
 Prompt injection is an authorization problem as much as a model problem. Assume untrusted content can influence model output. Keep permissions outside the prompt, constrain tools, validate actions, and require approval for high-impact operations.
 
+```mermaid
+flowchart TB
+    U[User input] --> A[AI application]
+    D[Retrieved data] --> A
+    T[Tool output] --> A
+    M[Models and artifacts] --> A
+    A --> O[Generated output]
+    A --> X[Tool actions]
+    O --> C[Users and downstream systems]
+    X --> S[External services]
+    A -. traces .-> L[Logs and feedback]
+```
+
 ## AI attack surface
 
 Direct prompt injection comes from the user. Indirect injection arrives through documents, web pages, tool results, or memory. Jailbreaks attempt to bypass behavioral controls. Excessive agency turns a model mistake into a real action because permissions or approvals are too broad.
