@@ -55,6 +55,18 @@ Offline metrics are necessary but insufficient. Use shadow traffic to observe be
 
 Automated rollback needs a trustworthy signal and a compatible previous release. For subtle quality regressions, pause promotion and require review rather than pretending latency alerts can detect everything.
 
+```mermaid
+flowchart TB
+    C[Candidate release] --> S[Shadow traffic]
+    S --> G{Quality and safety gates pass?}
+    G -- No --> X[Stop and investigate]
+    G -- Yes --> K[Canary traffic]
+    K --> H{Quality, reliability, and cost healthy?}
+    H -- No --> R[Rollback]
+    H -- Yes --> P[Progressive promotion]
+    P --> F[Full release]
+```
+
 ### Blue-green and canary releases
 
 Blue-green deployment keeps old and new environments available while traffic switches. It simplifies rapid reversal but doubles some capacity and does not expose the candidate gradually.
