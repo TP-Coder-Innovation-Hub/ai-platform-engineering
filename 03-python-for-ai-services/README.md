@@ -113,6 +113,144 @@ Return a stable error envelope with a machine-readable code, safe message, reque
 
 For long-running work, accept a job, return its identifier, process it asynchronously, and provide status or callback delivery. Define job expiry, cancellation, duplicate submission, and result retention.
 
+## Guided build: a typed FastAPI service
+
+FastAPI is useful here because it turns Python type declarations into request validation and an HTTP contract without forcing domain code to depend on the framework. Keep the framework at the transport boundary.
+
+Save the request model, result model, and `TextGenerator` protocol from the earlier service-boundary example in `domain.py`. Then create `main.py`:
+
+```python
+import asyncio
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import JSONResponse
+
+from domain import GenerateRequest, GenerateResult, TextGenerator
+
+
+class ProviderUnavailable(Exception):
+    pass
+
+
+class StubGenerator:
+    async def generate(self, request: GenerateRequest) -> GenerateResult:
+        await asyncio.sleep(0.05)
+        return GenerateResult(
+            text=f"stub: {request.text}",
+            model="learning-stub",
+            input_tokens=len(request.text.split()),
+            output_tokens=2,
+        )
+
+
+class GenerationService:
+    def __init__(self, generator: TextGenerator, concurrency: int = 4) -> None:
+        self._generator = generator
+        self._slots = asyncio.Semaphore(concurrency)
+
+    async def generate(self, request: GenerateRequest) -> GenerateResult:
+        try:
+            async with self._slots:
+                async with asyncio.timeout(5):
+                    return await self._generator.generate(request)
+        except TimeoutError as error:
+            raise ProviderUnavailable from error
+
+
+app = FastAPI(title="AI service lab")
+service = GenerationService(StubGenerator())
+
+
+def get_service() -> GenerationService:
+    return service
+
+
+Service = Annotated[GenerationService, Depends(get_service)]
+
+
+@app.exception_handler(ProviderUnavailable)
+async def provider_unavailable(
+    request: Request, error: ProviderUnavailable
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={
+            "code": "provider_unavailable",
+            "message": "Generation is temporarily unavailable",
+            "request_id": request.headers.get("x-request-id"),
+            "retryable": True,
+        },
+    )
+
+
+@app.get("/health/live")
+async def live() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/health/ready")
+async def ready() -> dict[str, str]:
+    return {"status": "ready"}
+
+
+@app.post("/v1/generate", response_model=GenerateResult)
+async def generate(payload: GenerateRequest, service: Service) -> GenerateResult:
+    return await service.generate(payload)
+```
+
+Install the small learning environment and run the service:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install fastapi uvicorn pytest httpx
+uvicorn main:app --reload
+```
+
+Exercise both the valid and invalid contracts. The second request should return `422` before application or provider code runs.
+
+```bash
+curl -s http://localhost:8000/v1/generate \
+  -H 'content-type: application/json' \
+  -d '{"text":"Explain bounded concurrency","max_tokens":80}'
+
+curl -i http://localhost:8000/v1/generate \
+  -H 'content-type: application/json' \
+  -d '{"text":"","max_tokens":0}'
+```
+
+Add a focused transport test in `test_main.py`:
+
+```python
+from fastapi.testclient import TestClient
+
+from main import app
+
+client = TestClient(app)
+
+
+def test_generate_contract() -> None:
+    response = client.post(
+        "/v1/generate",
+        json={"text": "hello service", "max_tokens": 32},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["model"] == "learning-stub"
+
+
+def test_rejects_empty_input() -> None:
+    response = client.post(
+        "/v1/generate",
+        json={"text": "", "max_tokens": 0},
+    )
+
+    assert response.status_code == 422
+```
+
+Run `pytest -q`, then package the service using the container workflow from the previous chapter. Keep `domain.py` free of FastAPI imports. In the next guided build, replace only `StubGenerator`; the HTTP contract and service-level concurrency control should remain unchanged.
+
 ## Provider integration
 
 Provider adapters should normalize request options, streaming events, usage, rate-limit information, and errors. Preserve the underlying provider request identifier for support and incident investigation.
