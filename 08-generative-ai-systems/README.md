@@ -28,17 +28,11 @@ Long context does not remove retrieval design. More tokens increase latency and 
 
 ```mermaid
 flowchart TB
-    B[Finite context budget] --> P[Trusted policy and system instructions]
-    B --> E[Retrieved evidence with provenance]
-    B --> H[Relevant conversation and task state]
-    B --> T[Tool definitions and bounded results]
-    B --> U[Current user request]
-    P --> C[Ordered context package]
-    E --> C
-    H --> C
-    T --> C
-    U --> C
-    C --> R[Reserve space for generation]
+    B[Finite context budget] --> T["Trusted context<br/>Policy, system instructions, and tool definitions"]
+    B --> R["Task context<br/>Evidence, conversation state, and user request"]
+    T --> C[Ordered context package]
+    R --> C
+    C --> G[Reserve space for generation]
 ```
 
 ## Model access layer
