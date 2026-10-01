@@ -160,7 +160,7 @@ Retrieval should combine semantic relevance with filters for scope, recency, and
 Compression can summarize old conversations or consolidate duplicate facts. Keep links to originals, mark the summary as derived, and revalidate important constraints before action.
 
 ```mermaid
-flowchart LR
+flowchart TB
     E[Candidate event or fact] --> V{Verified and useful later?}
     V -- No --> D[Keep only in transient task state]
     V -- Yes --> S[Store with owner, source, scope, and retention]
@@ -192,7 +192,7 @@ Local standard-input/output transport is simple and keeps a server under the hos
 Resources expose addressable context such as documents or schema. Tools perform computation or actions. Prompts provide reusable interaction templates. Do not use a prompt when the requirement is a deterministic policy or executable operation.
 
 ```mermaid
-flowchart LR
+flowchart TB
     U[User] --> H[Protocol host]
     H --> I[Identity, consent, and policy]
     I --> C[Protocol client]
@@ -281,7 +281,7 @@ Run `python mcp_client.py` in a second terminal. Capture three pieces of evidenc
 The completed project has three distinct layers:
 
 ```mermaid
-flowchart LR
+flowchart TB
     M[Model tool proposal] --> H[Host policy and dispatch]
     H --> D[Deterministic operations function]
     C[MCP client] --> S[MCP server adapter]
