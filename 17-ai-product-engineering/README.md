@@ -74,6 +74,176 @@ A chatbot supports open-ended conversation. A copilot stays inside a user's work
 
 Choose the interface that fits the task. Do not wrap every backend in a blank chat box.
 
+## Guided workshop: multi-agent incident triage
+
+Build a learning-grade assistant for a real operational task: turning an incident evidence bundle into a safe triage brief. Multiple agents are justified only if their separated responsibilities improve evidence coverage or review quality. They must not become an unstructured group chat.
+
+The coordinator is deterministic. Two specialist calls can run concurrently, the risk review waits for their findings, and the response draft waits for the review. No agent can restart a service or change infrastructure.
+
+```mermaid
+flowchart LR
+    I[Incident evidence bundle] --> C[Deterministic coordinator]
+    C --> T[Telemetry analyst]
+    C --> R[Runbook analyst]
+    T --> V[Risk reviewer]
+    R --> V
+    V --> D[Response drafter]
+    D --> H[Human review and action]
+    T -. findings .-> A[Trace, tokens, latency, and evaluation]
+    R -. findings .-> A
+    V -. decision .-> A
+    D -. draft .-> A
+```
+
+Create `incident_workshop.py`. It reuses the OpenAI-compatible SDK configuration from the model-access exercise, so it can run against a hosted provider, Ollama, or vLLM when the selected model supports the required context and instruction following.
+
+```python
+import asyncio
+import json
+import os
+from dataclasses import asdict, dataclass
+from time import monotonic
+
+from openai import AsyncOpenAI
+
+
+INCIDENT = {
+    "service": "retrieval-api",
+    "started_at": "2026-01-15T09:20:00Z",
+    "symptoms": {
+        "error_rate": "18%",
+        "p95_latency_ms": 6800,
+        "queue_depth": 940,
+    },
+    "recent_change": "retriever release 2.4 deployed 17 minutes earlier",
+    "trace_sample": "timeouts begin after vector-store query",
+    "runbook": [
+        "compare the current release with the previous healthy release",
+        "check vector-store latency and connection saturation",
+        "prepare rollback; require incident-commander approval before execution",
+    ],
+}
+
+
+@dataclass(frozen=True)
+class AgentResult:
+    role: str
+    content: str
+    latency_ms: int
+    input_tokens: int
+    output_tokens: int
+
+
+def create_client() -> AsyncOpenAI:
+    options = {"api_key": os.environ["MODEL_API_KEY"]}
+    if base_url := os.getenv("MODEL_BASE_URL"):
+        options["base_url"] = base_url
+    return AsyncOpenAI(**options)
+
+
+async def run_agent(
+    client: AsyncOpenAI,
+    role: str,
+    instruction: str,
+    evidence: dict,
+) -> AgentResult:
+    started = monotonic()
+    response = await client.chat.completions.create(
+        model=os.environ["MODEL_NAME"],
+        temperature=0,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    f"You are the {role}. {instruction} "
+                    "Use only supplied evidence. Mark unknowns. Do not execute actions."
+                ),
+            },
+            {"role": "user", "content": json.dumps(evidence)},
+        ],
+    )
+    usage = response.usage
+    return AgentResult(
+        role=role,
+        content=response.choices[0].message.content or "",
+        latency_ms=round((monotonic() - started) * 1_000),
+        input_tokens=usage.prompt_tokens if usage else 0,
+        output_tokens=usage.completion_tokens if usage else 0,
+    )
+
+
+async def triage() -> list[AgentResult]:
+    client = create_client()
+    telemetry, runbook = await asyncio.gather(
+        run_agent(
+            client,
+            "telemetry analyst",
+            "Identify observed symptoms, likely bottleneck, and missing evidence.",
+            INCIDENT,
+        ),
+        run_agent(
+            client,
+            "runbook analyst",
+            "Map the evidence to relevant runbook steps and approval boundaries.",
+            INCIDENT,
+        ),
+    )
+
+    findings = {
+        "incident": INCIDENT,
+        "telemetry_findings": telemetry.content,
+        "runbook_findings": runbook.content,
+    }
+    risk = await run_agent(
+        client,
+        "risk reviewer",
+        "Flag unsupported claims and actions requiring human approval.",
+        findings,
+    )
+    draft = await run_agent(
+        client,
+        "response drafter",
+        "Write a concise brief with impact, evidence, unknowns, and proposed next step.",
+        {**findings, "risk_review": risk.content},
+    )
+    await client.close()
+    return [telemetry, runbook, risk, draft]
+
+
+async def main() -> None:
+    results = await triage()
+    print(json.dumps([asdict(result) for result in results], indent=2))
+
+
+asyncio.run(main())
+```
+
+Run it with the environment variables from the Generative AI Systems chapter:
+
+```bash
+python incident_workshop.py > multi-agent-result.json
+```
+
+Inspect the result before adding any interface. The draft should distinguish observed facts from hypotheses, preserve the approval boundary around rollback, and avoid inventing customer impact. Total token use is the sum across all four calls; parallel specialists reduce elapsed time but not cost.
+
+### Compare against one agent
+
+Create a baseline that sends the same `INCIDENT` object to one model call with one instruction: produce a safe triage brief with evidence, unknowns, runbook guidance, and approval boundaries. Save its result separately.
+
+Score both designs on the same five criteria:
+
+| Criterion | Test |
+|---|---|
+| Evidence coverage | Every claim maps to a supplied incident field |
+| Unsupported claims | Count facts introduced without evidence |
+| Action safety | Rollback remains a proposal requiring human approval |
+| Usefulness | The brief identifies impact, unknowns, and next investigation |
+| Efficiency | Compare elapsed time and total input/output tokens |
+
+Keep the multi-agent design only if role separation improves a criterion that matters enough to justify extra calls, latency, cost, and failure states. If the single-agent baseline performs equally well, use it.
+
+This workshop intentionally stays inside one process and uses static evidence. Durable execution, live telemetry tools, authentication, and operational actions belong in a later capstone, where their failure and approval states can be designed explicitly.
+
 ## Product analytics
 
 Track task completion, correction, escalation, repeat use, latency, quality signals, and cost per successful task. Raw thumbs-up rates are easy to collect and hard to interpret. Connect feedback to request versions and ask targeted questions after meaningful interactions.
