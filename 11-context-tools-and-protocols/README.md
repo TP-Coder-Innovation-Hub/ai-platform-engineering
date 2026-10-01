@@ -33,6 +33,116 @@ Classify tools by impact:
 | Sensitive | Query customer records | least privilege and purpose checks |
 | Irreversible | Transfer funds or delete data | explicit approval and strong confirmation |
 
+## Guided build, part 1: execute a typed tool call
+
+Build a small operations assistant that can inspect a fixed service catalog. Keep the capability deterministic; the model chooses whether to request the tool, while Python validates and executes it.
+
+Create `operations.py`:
+
+```python
+from typing import Literal
+
+ServiceName = Literal["catalog-api", "retrieval-api", "model-gateway"]
+
+SERVICES = {
+    "catalog-api": {"status": "healthy", "latency_ms": 42},
+    "retrieval-api": {"status": "degraded", "latency_ms": 680},
+    "model-gateway": {"status": "healthy", "latency_ms": 210},
+}
+
+
+def get_service_status(service_name: ServiceName) -> dict[str, str | int]:
+    """Return bounded learning data for one known service."""
+    service = SERVICES.get(service_name)
+    if service is None:
+        return {"status": "error", "message": "unknown service"}
+    return {"service": service_name, **service}
+```
+
+Create `tool_calling.py`. The schema presented to the model and the runtime dispatch allowlist are separate controls:
+
+```python
+import json
+import os
+
+from openai import OpenAI
+
+from operations import get_service_status
+
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_service_status",
+            "description": "Read current status for one service in the learning catalog.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "service_name": {
+                        "type": "string",
+                        "enum": ["catalog-api", "retrieval-api", "model-gateway"],
+                    }
+                },
+                "required": ["service_name"],
+                "additionalProperties": False,
+            },
+        },
+    }
+]
+
+DISPATCH = {"get_service_status": get_service_status}
+
+options = {"api_key": os.environ["MODEL_API_KEY"]}
+if base_url := os.getenv("MODEL_BASE_URL"):
+    options["base_url"] = base_url
+client = OpenAI(**options)
+
+messages = [
+    {
+        "role": "user",
+        "content": "Check retrieval-api and summarize whether it needs attention.",
+    }
+]
+
+response = client.chat.completions.create(
+    model=os.environ["MODEL_NAME"],
+    messages=messages,
+    tools=TOOLS,
+)
+assistant_message = response.choices[0].message
+messages.append(assistant_message)
+
+for call in assistant_message.tool_calls or []:
+    function = DISPATCH.get(call.function.name)
+    if function is None:
+        result = {"status": "error", "message": "tool is not allowed"}
+    else:
+        try:
+            arguments = json.loads(call.function.arguments)
+            result = function(**arguments)
+        except (json.JSONDecodeError, TypeError) as error:
+            result = {"status": "error", "message": type(error).__name__}
+
+    messages.append(
+        {
+            "role": "tool",
+            "tool_call_id": call.id,
+            "content": json.dumps(result),
+        }
+    )
+
+final = client.chat.completions.create(
+    model=os.environ["MODEL_NAME"],
+    messages=messages,
+    tools=TOOLS,
+)
+print(final.choices[0].message.content)
+```
+
+Use the SDK environment from the Generative AI Systems chapter and run `python tool_calling.py`. Inspect the first response before executing it: the model emits a proposal containing a tool name and arguments; the runtime decides whether that proposal is allowed.
+
+Change the prompt so it asks for an unknown service and then for an undeclared action such as restarting a service. The runtime must not invent a dispatch target. If you later add a write tool, collect approval in the host application and pass that verified decision outside the model-generated arguments. An `approved: true` value chosen by the model is not approval.
+
 ## Memory model
 
 Conversation state supports the current interaction. Episodic memory records past events. Semantic memory stores durable facts. Procedural memory stores policies or learned operating instructions. Keep these stores separate because retention, trust, and update rules differ.
@@ -98,6 +208,88 @@ flowchart LR
     P[Audit, quotas, and revocation] -. governs .-> I
     P -. governs .-> A
 ```
+
+## Guided build, part 2: expose the capability through MCP
+
+Tool calling lets a model propose a function invocation. MCP lets hosts discover and invoke capabilities through a shared protocol. Reuse the same deterministic domain function rather than duplicating its logic inside the protocol adapter.
+
+Install the official Python SDK v2 with its development tools, then commit the resolved dependency version because the v1 and v2 server APIs differ:
+
+```bash
+python -m pip install 'mcp[cli]'
+```
+
+Create `mcp_server.py`:
+
+```python
+from typing import Literal
+
+from mcp.server import MCPServer
+
+from operations import get_service_status as lookup_service_status
+
+mcp = MCPServer("operations-learning-server")
+
+
+@mcp.tool()
+def get_service_status(
+    service_name: Literal["catalog-api", "retrieval-api", "model-gateway"],
+) -> dict[str, str | int]:
+    """Read current status for one service in the learning catalog."""
+    return lookup_service_status(service_name)
+```
+
+Open the server in the MCP Inspector:
+
+```bash
+mcp dev mcp_server.py
+```
+
+Inspect the generated schema, invoke `get_service_status`, and confirm that an unknown value is rejected before the function runs. The Inspector proves protocol discovery and invocation; it does not prove that an LLM chose the right tool.
+
+Next, run the server over Streamable HTTP:
+
+```bash
+mcp run mcp_server.py --transport streamable-http
+```
+
+Create a minimal protocol client in `mcp_client.py`:
+
+```python
+import asyncio
+
+from mcp import Client
+
+
+async def main() -> None:
+    async with Client("http://localhost:8000/mcp") as client:
+        tools = await client.list_tools()
+        print([tool.name for tool in tools.tools])
+
+        result = await client.call_tool(
+            "get_service_status",
+            {"service_name": "retrieval-api"},
+        )
+        print(result.structured_content)
+
+
+asyncio.run(main())
+```
+
+Run `python mcp_client.py` in a second terminal. Capture three pieces of evidence: discovered tool name, generated input schema, and structured result. Then stop the HTTP server and repeat the original local function test. The domain capability should remain usable without MCP.
+
+The completed project has three distinct layers:
+
+```mermaid
+flowchart LR
+    M[Model tool proposal] --> H[Host policy and dispatch]
+    H --> D[Deterministic operations function]
+    C[MCP client] --> S[MCP server adapter]
+    S --> D
+    D --> R[Bounded structured result]
+```
+
+Tool calling and MCP converge on the same capability, but they solve different problems. The host owns model interaction, user consent, and approval. The MCP server owns capability contracts and server-side enforcement.
 
 ## Authentication and authorization
 
