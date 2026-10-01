@@ -252,16 +252,9 @@ Run experiments with guardrail metrics for safety, support load, latency, and co
 ```mermaid
 flowchart TB
     B[Business outcome] --> U[Successful user task]
-    U --> Q[Quality evidence]
-    U --> W[Workflow evidence]
-    U --> O[Operational evidence]
-    Q --> G[Grounding, correctness, and safety]
-    W --> A[Correct tool or workflow completion]
-    W --> R[Useful recovery or escalation]
-    A --> V[Authorization, validation, and idempotency]
-    R --> H[Handoff completeness and support resolution]
-    O --> L[Latency and availability]
-    O --> C[Cost per successful task]
+    U --> Q["Quality evidence<br/>Grounding, correctness, and safety"]
+    U --> W["Workflow evidence<br/>Completion, authorization, and recovery"]
+    U --> O["Operational evidence<br/>Latency, availability, and cost per success"]
 ```
 
 ## Cost and capacity
