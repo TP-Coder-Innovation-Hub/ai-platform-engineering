@@ -56,7 +56,7 @@ Keep four layers separate:
 Dependency direction points inward. Domain code should not import a web framework or provider SDK. This makes offline tests fast and allows a background worker to reuse the same use case as an HTTP endpoint.
 
 ```mermaid
-flowchart LR
+flowchart TB
     H[HTTP or queue] --> A[Application use case]
     A --> D[Domain contracts]
     A --> P[Provider protocol]
