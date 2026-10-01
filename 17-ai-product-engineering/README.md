@@ -253,8 +253,9 @@ Run experiments with guardrail metrics for safety, support load, latency, and co
 flowchart TB
     B[Business outcome] --> U[Successful user task]
     U --> Q["Quality evidence<br/>Grounding, correctness, and safety"]
-    U --> W["Workflow evidence<br/>Completion, authorization, and recovery"]
-    U --> O["Operational evidence<br/>Latency, availability, and cost per success"]
+    U --> D[Delivery evidence]
+    D --> W["Workflow evidence<br/>Completion, authorization, and recovery"]
+    D --> O["Operational evidence<br/>Latency, availability, and cost per success"]
 ```
 
 ## Cost and capacity
