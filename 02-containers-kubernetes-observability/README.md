@@ -28,6 +28,77 @@ Keep one primary responsibility per container. Sidecars are justified when their
 
 A local composition file can connect the API, queue, database, model stub, and telemetry collector. Keep it development-focused. Production orchestration needs identity, policy, scheduling, secrets, and recovery behavior that local composition does not model fully.
 
+## Guided build: package and publish an instrumented API
+
+Build one small service and carry the same immutable image through the rest of this chapter. The service returns a deterministic response so the exercise stays focused on packaging, deployment, and telemetry.
+
+Create `app.py`:
+
+```python
+from fastapi import FastAPI
+app = FastAPI()
+
+
+@app.get("/healthz")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/classify")
+def classify(text: str) -> dict[str, str]:
+    label = "long" if len(text) > 40 else "short"
+    return {"label": label}
+```
+
+Create `requirements.txt`:
+
+```text
+fastapi
+uvicorn
+opentelemetry-distro
+opentelemetry-exporter-otlp-proto-http
+opentelemetry-instrumentation-fastapi
+```
+
+For a repeatable workshop, resolve these dependencies once and commit the generated lock file.
+
+Create the container contract:
+
+```dockerfile
+FROM python:3.13-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app.py .
+
+RUN useradd --system --uid 10001 appuser
+USER 10001
+
+EXPOSE 8000
+CMD ["opentelemetry-instrument", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+Build and test the image locally:
+
+```bash
+docker build -t ai-platform-lab:0.1.0 .
+docker run --rm -p 8000:8000 ai-platform-lab:0.1.0
+curl 'http://localhost:8000/classify?text=hello'
+```
+
+Publish the exact image that passed the local check. The following example uses GitHub Container Registry; Docker Hub uses the same tag-and-push flow with a different registry name.
+
+```bash
+export IMAGE=ghcr.io/YOUR_GITHUB_USERNAME/ai-platform-lab:0.1.0
+docker tag ai-platform-lab:0.1.0 "$IMAGE"
+printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+docker push "$IMAGE"
+docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE"
+```
+
+Do not paste a token directly into shell history. Confirm that the registry shows the expected tag and record the resulting digest. Later deployment steps should change the image reference, not rebuild the application.
+
 ## Kubernetes architecture
 
 The API server accepts desired state. Controllers reconcile resources toward that state. The scheduler assigns pending pods to nodes. Node agents and the container runtime start and supervise containers. The distributed state store holds cluster state and requires protected backup and recovery.
@@ -101,6 +172,90 @@ Schedule accelerator workloads onto dedicated pools when isolation or cost contr
 
 Scale inference on demand signals that represent pressure: queue depth, waiting time, active sequences, or accelerator utilization. CPU-based autoscaling often misses the real bottleneck. Include cold-start and model-download time in the scaling model.
 
+## Guided build: deploy the published image to local Kubernetes
+
+Create a disposable local cluster with `kind`, then deploy the image from the registry. Replace the image placeholder with the digest captured in the previous exercise.
+
+```bash
+kind create cluster --name ai-platform-lab
+```
+
+Create `service.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-platform-lab
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-platform-lab
+  template:
+    metadata:
+      labels:
+        app: ai-platform-lab
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: api
+          image: ghcr.io/YOUR_GITHUB_USERNAME/ai-platform-lab@sha256:REPLACE_ME
+          ports:
+            - containerPort: 8000
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: ai-platform-lab
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-lgtm:4318
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-platform-lab
+spec:
+  selector:
+    app: ai-platform-lab
+  ports:
+    - port: 8000
+      targetPort: 8000
+```
+
+Apply it and verify reconciliation before sending traffic:
+
+```bash
+kubectl apply -f service.yaml
+kubectl rollout status deployment/ai-platform-lab
+kubectl get pods,service
+kubectl port-forward service/ai-platform-lab 8000:8000
+curl 'http://localhost:8000/classify?text=observe-this-request'
+```
+
+Delete one pod and watch the Deployment replace it. Then temporarily change the readiness path to an invalid value and observe that the pods stay running but leave the Service endpoints. Restore the valid probe before continuing.
+
 ## Signals and questions
 
 Metrics answer how much and how often. Logs record discrete events. Traces show causal paths through a request. Profiles explain resource consumption. Use OpenTelemetry-compatible instrumentation when possible so telemetry is not locked to one backend.
@@ -145,6 +300,34 @@ Propagate context across HTTP, queues, retrieval, model calls, and tools. Sampli
 Start with service objectives and dependency health. A dashboard should help answer whether users are affected, which path is failing, what changed, and where saturation occurs.
 
 Page on urgent, actionable user impact. Send lower-priority capacity or quality trends to normal work queues. Every page needs an owner and runbook.
+
+## Guided build: inspect request traces in Grafana
+
+For this learning environment, run Grafana's OpenTelemetry learning stack inside the cluster. It combines an OTLP receiver with Grafana and compatible telemetry backends; treat it as a local lab, not a deployment pattern for a shared environment.
+
+```bash
+kubectl create deployment otel-lgtm --image=grafana/otel-lgtm:latest
+kubectl expose deployment otel-lgtm \
+  --name=otel-lgtm \
+  --type=ClusterIP \
+  --port=4318 \
+  --target-port=4318
+kubectl port-forward deployment/otel-lgtm 3000:3000
+```
+
+Restart the API pods after the collector becomes ready, generate several requests, and open `http://localhost:3000`.
+
+```bash
+kubectl rollout restart deployment/ai-platform-lab
+kubectl port-forward service/ai-platform-lab 8000:8000
+for text in short 'this-is-a-longer-input-that-crosses-the-classifier-threshold'; do
+  curl "http://localhost:8000/classify?text=$text"
+done
+```
+
+In Grafana Explore, select the trace backend and filter on `service.name = ai-platform-lab`. Open one trace and identify the HTTP route, duration, status code, and service name. Do not add the query text as an attribute; it is user-controlled and may contain sensitive data.
+
+Create a small dashboard with request count, error count, and latency once those metrics are available from the service. The dashboard is useful only if each panel answers an operational question. Record one screenshot or exported dashboard JSON as evidence that telemetry crossed the application, collector, storage, and visualization boundaries.
 
 ## Service objectives
 
