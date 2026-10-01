@@ -81,7 +81,7 @@ Build a learning-grade assistant for a real operational task: turning an inciden
 The coordinator is deterministic. Two specialist calls can run concurrently, the risk review waits for their findings, and the response draft waits for the review. No agent can restart a service or change infrastructure.
 
 ```mermaid
-flowchart LR
+flowchart TB
     I[Incident evidence bundle] --> C[Deterministic coordinator]
     C --> T[Telemetry analyst]
     C --> R[Runbook analyst]
@@ -89,10 +89,7 @@ flowchart LR
     R --> V
     V --> D[Response drafter]
     D --> H[Human review and action]
-    T -. findings .-> A[Trace, tokens, latency, and evaluation]
-    R -. findings .-> A
-    V -. decision .-> A
-    D -. draft .-> A
+    D -. evidence .-> A[Trace, tokens, latency, and evaluation]
 ```
 
 Create `incident_workshop.py`. It reuses the OpenAI-compatible SDK configuration from the model-access exercise, so it can run against a hosted provider, Ollama, or vLLM when the selected model supports the required context and instruction following.
@@ -255,14 +252,16 @@ Run experiments with guardrail metrics for safety, support load, latency, and co
 ```mermaid
 flowchart TB
     B[Business outcome] --> U[Successful user task]
-    U --> Q[Answer or decision quality]
-    U --> A[Correct tool or workflow completion]
-    U --> R[Useful recovery or escalation]
+    U --> Q[Quality evidence]
+    U --> W[Workflow evidence]
+    U --> O[Operational evidence]
     Q --> G[Grounding, correctness, and safety]
+    W --> A[Correct tool or workflow completion]
+    W --> R[Useful recovery or escalation]
     A --> V[Authorization, validation, and idempotency]
     R --> H[Handoff completeness and support resolution]
-    U --> L[Latency and availability]
-    U --> C[Cost per successful task]
+    O --> L[Latency and availability]
+    O --> C[Cost per successful task]
 ```
 
 ## Cost and capacity
