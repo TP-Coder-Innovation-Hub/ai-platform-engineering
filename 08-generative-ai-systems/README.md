@@ -80,6 +80,150 @@ sequenceDiagram
     G-->>O: versions, latency, tokens, and outcome
 ```
 
+## Guided build: call a model through an SDK
+
+Start with one direct SDK call so the network boundary is visible before introducing a gateway. This example uses the OpenAI Python SDK because the same client can call OpenAI-compatible endpoints exposed by Ollama and vLLM. Compatibility is an interface claim, not a guarantee that every provider supports every parameter.
+
+Create an isolated environment:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install openai
+```
+
+Set the endpoint, credential, and model outside the program. Choose one configuration:
+
+```bash
+# Hosted provider
+export MODEL_API_KEY='replace-with-a-development-key'
+export MODEL_NAME='replace-with-an-available-model'
+
+# Local Ollama alternative
+export MODEL_BASE_URL='http://localhost:11434/v1'
+export MODEL_API_KEY='ollama'
+export MODEL_NAME='replace-with-a-pulled-model'
+
+# Local vLLM alternative
+export MODEL_BASE_URL='http://localhost:8000/v1'
+export MODEL_API_KEY='local-development'
+export MODEL_NAME='replace-with-the-served-model'
+```
+
+Only set `MODEL_BASE_URL` when using a compatible endpoint. Create `sdk_call.py`:
+
+```python
+import asyncio
+import os
+from time import monotonic
+
+from openai import AsyncOpenAI
+
+
+def create_client() -> AsyncOpenAI:
+    options = {"api_key": os.environ["MODEL_API_KEY"]}
+    if base_url := os.getenv("MODEL_BASE_URL"):
+        options["base_url"] = base_url
+    return AsyncOpenAI(**options)
+
+
+async def main() -> None:
+    client = create_client()
+    started = monotonic()
+    response = await client.chat.completions.create(
+        model=os.environ["MODEL_NAME"],
+        messages=[
+            {
+                "role": "user",
+                "content": "Return one sentence explaining request backpressure.",
+            }
+        ],
+        temperature=0,
+        max_tokens=80,
+    )
+    elapsed_ms = round((monotonic() - started) * 1_000)
+    usage = response.usage
+
+    print(response.choices[0].message.content)
+    print(
+        {
+            "model": response.model,
+            "latency_ms": elapsed_ms,
+            "input_tokens": usage.prompt_tokens if usage else None,
+            "output_tokens": usage.completion_tokens if usage else None,
+        }
+    )
+    await client.close()
+
+
+asyncio.run(main())
+```
+
+Run `python sdk_call.py`. Confirm that the answer and operational metadata are separate. Do not log the API key, full prompt, or generated text as telemetry.
+
+### Stream the response
+
+Streaming changes the response lifecycle. Replace the request block with a streaming call and measure time to the first content token separately from total duration:
+
+```python
+started = monotonic()
+first_token_ms = None
+stream = await client.chat.completions.create(
+    model=os.environ["MODEL_NAME"],
+    messages=[{"role": "user", "content": "Explain request backpressure."}],
+    stream=True,
+    max_tokens=120,
+)
+
+async for event in stream:
+    if not event.choices:
+        continue
+    content = event.choices[0].delta.content
+    if content:
+        if first_token_ms is None:
+            first_token_ms = round((monotonic() - started) * 1_000)
+        print(content, end="", flush=True)
+
+print()
+print({"first_token_ms": first_token_ms})
+```
+
+Interrupt the client during generation. The exercise is incomplete if the application continues unnecessary work without detecting cancellation.
+
+### Move the SDK behind the service contract
+
+Reuse `GenerateRequest`, `GenerateResult`, and `TextGenerator` from the Python service chapter. Provider-specific objects remain inside this adapter:
+
+```python
+from openai import AsyncOpenAI
+
+from domain import GenerateRequest, GenerateResult
+
+
+class OpenAICompatibleGenerator:
+    def __init__(self, client: AsyncOpenAI, model: str) -> None:
+        self._client = client
+        self._model = model
+
+    async def generate(self, request: GenerateRequest) -> GenerateResult:
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=[{"role": "user", "content": request.text}],
+            max_tokens=request.max_tokens,
+        )
+        usage = response.usage
+        return GenerateResult(
+            text=response.choices[0].message.content or "",
+            model=response.model,
+            input_tokens=usage.prompt_tokens if usage else 0,
+            output_tokens=usage.completion_tokens if usage else 0,
+        )
+```
+
+Replace `StubGenerator` in the FastAPI exercise with this adapter. Run the same API tests with a fake `TextGenerator`; unit tests should not spend provider quota or require network access.
+
+Finally, run the same prompt against a hosted model and either Ollama or vLLM. Record status, time to first token, total latency, token reporting, and output validity. If the compatible endpoint ignores a parameter or omits usage, capture that difference in the adapter rather than leaking it into the API response contract.
+
 ## Managed and self-hosted models
 
 Managed APIs reduce infrastructure work and provide rapid access to capable models. They introduce provider quotas, policy, data-processing terms, regional availability, and model lifecycle dependencies.
